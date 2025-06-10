@@ -10,7 +10,7 @@ KERNELDIR ?= /lib/modules/$(shell uname -r)/build
 MODULE_NAME := acomp-dpusm
 
 # Define the home path for the DPUSM and ZFS source directories
-HOME_PATH ?= /devel/zfs
+HOME_PATH ?= /home/lbeirne
 
 # Define the include paths for DPUSM
 DPUSM_INCLUDE := $(HOME_PATH)/dpusm/include

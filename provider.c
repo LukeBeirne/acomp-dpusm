@@ -149,6 +149,26 @@ static int zfs_acomp_copy_to_generic(dpusm_mv_t *mv, void *buf, size_t size)
 	return DPUSM_OK;
 }
 
+static int zfs_acomp_copy_between_source(dpusm_mv_t *src_mv, dpusm_mv_t *dst_mv,
+    size_t size, const dpusm_pf_t *funcs)
+{
+	struct provider_handle *src = src_mv->handle;
+	struct provider_handle *dst = dst_mv->handle;
+
+	void *start = ptr_start(src, 0);
+
+	return funcs->copy.between.destination(start, dst, size);
+}
+
+static int zfs_acomp_copy_between_destination(void *src, void *dst_handle, size_t size)
+{
+	void *dst = ptr_start(dst_handle, 0);
+
+	memcpy(dst, src, size);
+
+	return DPUSM_OK;
+}
+
 static int zfs_acomp_compress(dpusm_compress_t alg, int level, void *src,
 			      size_t s_len, void *dst, size_t *d_len)
 {
@@ -211,16 +231,20 @@ static const dpusm_pf_t zfs_acomp_provider_functions = {
 	.get_size = zfs_acomp_get_size,
 	.free = zfs_acomp_free,
 	.copy = {
-			.from = {
+			.from    = {
 					.generic = zfs_acomp_copy_from_generic,
 					.ptr = NULL,
 					.scatterlist = NULL,
-				},
-			.to =   {
+				   },
+			.to      = {
 					.generic = zfs_acomp_copy_to_generic,
 					.ptr = NULL,
 					.scatterlist = NULL,
-				},
+				   },
+			.between = {
+					.source = zfs_acomp_copy_between_source,
+					.destination = zfs_acomp_copy_between_destination,
+				   },
 		},
 	.compress = zfs_acomp_compress,
 	.decompress = zfs_acomp_decompress,
