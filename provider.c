@@ -155,16 +155,37 @@ static int zfs_acomp_copy_between_source(dpusm_mv_t *src_mv, dpusm_mv_t *dst_mv,
 	struct provider_handle *src = src_mv->handle;
 	struct provider_handle *dst = dst_mv->handle;
 
-	void *start = ptr_start(src, 0);
-
-	return funcs->copy.between.destination(start, dst, size);
+	return funcs->copy.between.destination(ptr_start(src, 0), dst, size);
 }
 
 static int zfs_acomp_copy_between_destination(void *src, void *dst_handle, size_t size)
 {
-	void *dst = ptr_start(dst_handle, 0);
+	memcpy(ptr_start(dst_handle, 0), src, size);
+	return DPUSM_OK;
+}
 
-	memcpy(dst, src, size);
+static int zfs_acomp_zero_fill(void *handle, size_t offset, size_t size)
+{
+	memset(ptr_start(handle, offset), 0, size);
+	return DPUSM_OK;
+}
+
+static int zfs_acomp_all_zeros(void *handle, size_t offset, size_t size)
+{
+	uint64_t *array = ptr_start(handle, offset);
+	size_t i;
+	for(i = 0; i < size / sizeof(uint64_t); i++) {
+		if (array[i]) {
+			return (DPUSM_BAD_RESULT);
+		}
+	}
+
+	char *remaining = ptr_start(handle, offset);
+	for (i *= sizeof(uint64_t); i < size; i++) {
+		if (remaining[i]) {
+			return (DPUSM_BAD_RESULT);
+		}
+	}
 
 	return DPUSM_OK;
 }
@@ -246,6 +267,8 @@ static const dpusm_pf_t zfs_acomp_provider_functions = {
 					.destination = zfs_acomp_copy_between_destination,
 				   },
 		},
+	.zero_fill = zfs_acomp_zero_fill,
+	.all_zeros = zfs_acomp_all_zeros,
 	.compress = zfs_acomp_compress,
 	.decompress = zfs_acomp_decompress,
 	.at_connect = NULL,
